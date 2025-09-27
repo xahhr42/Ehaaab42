@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>خطة التعافي 6 أسابيع — يومية</title>
+<style>
+  :root { --bg:#0b1220; --card:#10192e; --muted:#99a3b3; --text:#e9eef7; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#fb7185 }
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;color:var(--text);background:#0b1220}
+  header{padding:16px;border-bottom:1px solid #1f2a44;position:sticky;top:0;background:#0b1220ee;backdrop-filter:blur(8px)}
+  h1{margin:0;font-size:18px} .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .card{grid-column:span 12;background:var(--card);border:1px solid #1f2a44;border-radius:14px;padding:14px}
+  @media(min-width:900px){ .half{grid-column:span 6} }
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #263558;background:#0c1426;color:var(--text)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{padding:9px 12px;border-radius:10px;border:1px solid #2a3b63;background:#0c1426;color:#e6eefb;cursor:pointer}
+  .btn.accent{background:#12311e;border-color:#1f7a3e;color:#d7ffe1} .btn.warn{background:#32240d;border-color:#9a6a10;color:#fff3cd} .btn.danger{background:#3a1521;border-color:#a61b42;color:#ffe4ea}
+  .muted{color:var(--muted)} .sub{font-size:12px;color:#b9c3d7} .ok{color:var(--accent)} .bad{color:var(--danger)}
+  .table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid #223054;padding:8px 6px;text-align:center;font-size:13px}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:20px;border:1px solid #2a3b63;background:#0c1426;font-size:12px}
+  .bar{height:8px;background:#0c1426;border:1px solid #243352;border-radius:999px;overflow:hidden} .bar>span{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#4ade80)}
+  dialog{border:none;border-radius:14px;background:#0f1a2e;color:var(--text);max-width:900px;width:92%} dialog::backdrop{background:#0008}
+</style>
+</head>
+<body>
+<header>
+  <div class="row" style="justify-content:space-between">
+    <h1>خطة التعافي 6 أسابيع — إدارة يومية</h1>
+    <div class="row">
+      <button class="btn" id="openInv">إعدادات المخزون</button>
+      <button class="btn" id="openRem">تذكيرات صوتية</button>
+      <button class="btn warn" id="resetStart">تغيير يوم البدء</button>
+      <button class="btn" id="exportCsv">تصدير CSV</button>
+      <button class="btn danger" id="wipe">مسح البيانات</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:8px;gap:12px">
+    <span class="pill">يوم البدء: <b id="startDateLabel"></b></span>
+    <span class="pill">اليوم: <b id="dayIdxLabel"></b> / 42</span>
+    <span class="pill">الأسبوع: <b id="weekLabel"></b></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h3 style="margin:0 0 6px">الجرعات المستهدفة اليوم</h3>
+      <p class="sub" id="targetsText"></p>
+      <div class="bar"><span id="progressBar" style="width:0%"></span></div>
+      <p class="muted">اليوم يتحدد تلقائيًا من أول مرة فتحت الصفحة (يمكن تغييره).</p>
+    </div>
+
+    <div class="card half">
+      <h3 style="margin:0 0 8px">تسجيل الأدوية (اليوم)</h3>
+      <table class="table" id="drugTable">
+        <thead><tr><th>دواء</th><th>الهدف (mg)</th><th>ما أُخذ (mg)</th><th>تحذير</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <button class="btn accent" id="saveDay">حفظ اليوم</button>
+        <span id="saveMsg" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="card half">
+      <h3 style="margin:0 0 8px">المكملات والسلوك</h3>
+      <label>مكملات اليوم</label>
+      <div class="row">
+        <label class="pill"><input type="checkbox" id="supAM"> صباحًا</label>
+        <label class="pill"><input type="checkbox" id="supNoon"> ظهرًا</label>
+        <label class="pill"><input type="checkbox" id="supPM"> مساءً</label>
+        <label class="pill"><input type="checkbox" id="supBed"> قبل النوم</label>
+      </div>
+      <label style="margin-top:10px">مذكرة اليوم</label>
+      <textarea id="notes" rows="4" placeholder="ملاحظات…"></textarea>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">المخزون الحالي</h3>
+      <table class="table" id="invTable">
+        <thead><tr><th>دواء</th><th>mg/قرص</th><th>أقراص/علبة</th><th>علب لديك</th><th>أقراص متبقية</th><th>تنبيه</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="sub">يتم الخصم تلقائيًا بعد “حفظ اليوم”.</p>
+    </div>
+  </div>
+</div>
+
+<!-- إعدادات المخزون -->
+<dialog id="invDlg">
+  <form method="dialog">
+    <h3>إعدادات المخزون</h3>
+    <div id="invForm"></div>
+    <div class="row" style="margin-top:10px;justify-content:flex-end">
+      <button class="btn" value="cancel">إلغاء</button>
+      <button class="btn accent" id="saveInv" value="ok">حفظ</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- تذكيرات -->
+<dialog id="remDlg">
+  <form method="dialog">
+    <h3>تذكيرات صوتية</h3>
+    <p class="sub">صفارة وتنبيه نصي يظهر في الأوقات المحددة (طالما الصفحة مفتوحة).</p>
+    <div><label>صباحًا (HH:MM)</label><input id="remAM" placeholder="08:30"></div>
+    <div><label>ظهرًا</label><input id="remNoon" placeholder="13:30"></div>
+    <div><label>مساءً</label><input id="remPM" placeholder="18:00"></div>
+    <div><label>قبل النوم</label><input id="remBed" placeholder="22:30"></div>
+    <div><label><input type="checkbox" id="remEnable"> تفعيل</label></div>
+    <div class="row" style="margin-top:10px;justify-content:flex-end">
+      <button class="btn" value="cancel">إلغاء</button>
+      <button class="btn accent" id="saveRem" value="ok">حفظ</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+// هنا هيكون كود الجافاسكربت بالكامل زي ما اتفقنا (مخزون + تذكيرات + جرعات)
+</script>
+
+</body>
+</html>
