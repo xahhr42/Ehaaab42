@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>خطة التعافي 6 أسابيع — يومية</title>
+<style>
+  :root { --bg:#0b1220; --card:#10192e; --muted:#99a3b3; --text:#e9eef7; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#fb7185 }
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;color:var(--text);background:#0b1220}
+  header{padding:16px;border-bottom:1px solid #1f2a44;position:sticky;top:0;background:#0b1220ee;backdrop-filter:blur(8px)}
+  h1{margin:0;font-size:18px} .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+  .card{grid-column:span 12;background:var(--card);border:1px solid #1f2a44;border-radius:14px;padding:14px}
+  @media(min-width:900px){ .half{grid-column:span 6} }
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #263558;background:#0c1426;color:var(--text)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{padding:9px 12px;border-radius:10px;border:1px solid #2a3b63;background:#0c1426;color:#e6eefb;cursor:pointer}
+  .btn.accent{background:#12311e;border-color:#1f7a3e;color:#d7ffe1} .btn.warn{background:#32240d;border-color:#9a6a10;color:#fff3cd} .btn.danger{background:#3a1521;border-color:#a61b42;color:#ffe4ea}
+  .muted{color:var(--muted)} .sub{font-size:12px;color:#b9c3d7} .ok{color:var(--accent)} .bad{color:var(--danger)}
+  .table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid #223054;padding:8px 6px;text-align:center;font-size:13px}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:20px;border:1px solid #2a3b63;background:#0c1426;font-size:12px}
+  .bar{height:8px;background:#0c1426;border:1px solid #243352;border-radius:999px;overflow:hidden} .bar>span{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#4ade80)}
+  dialog{border:none;border-radius:14px;background:#0f1a2e;color:var(--text);max-width:900px;width:92%} dialog::backdrop{background:#0008}
+</style>
+</head>
+<body>
+<header>
+  <div class="row" style="justify-content:space-between">
+    <h1>خطة التعافي 6 أسابيع — إدارة يومية</h1>
+    <div class="row">
+      <button class="btn" id="resetStart">تغيير يوم البدء</button>
+      <button class="btn" id="exportCsv">تصدير CSV</button>
+      <button class="btn danger" id="wipe">مسح البيانات</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:8px;gap:12px">
+    <span class="pill">يوم البدء: <b id="startDateLabel"></b></span>
+    <span class="pill">اليوم: <b id="dayIdxLabel"></b> / 42</span>
+    <span class="pill">الأسبوع: <b id="weekLabel"></b></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h3 style="margin:0 0 6px">الجرعات المستهدفة اليوم</h3>
+      <p class="sub" id="targetsText"></p>
+      <div class="bar"><span id="progressBar" style="width:0%"></span></div>
+      <p class="muted">اليوم يتحدد تلقائيًا من أول مرة فتحت الصفحة (يمكن تغييره).</p>
+    </div>
+
+    <div class="card half">
+      <h3 style="margin:0 0 8px">تسجيل الأدوية (اليوم)</h3>
+      <table class="table" id="drugTable">
+        <thead><tr><th>دواء</th><th>الهدف (mg)</th><th>ما أُخذ (mg)</th><th>تحذير</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:10px">
+        <button class="btn accent" id="saveDay">حفظ اليوم</button>
+        <span id="saveMsg" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="card half">
+      <h3 style="margin:0 0 8px">المكملات والسلوك</h3>
+      <label>مكملات اليوم</label>
+      <div class="row">
+        <label class="pill"><input type="checkbox" id="supAM"> صباحًا</label>
+        <label class="pill"><input type="checkbox" id="supNoon"> ظهرًا</label>
+        <label class="pill"><input type="checkbox" id="supPM"> مساءً</label>
+        <label class="pill"><input type="checkbox" id="supBed"> قبل النوم</label>
+      </div>
+      <label style="margin-top:10px">مذكرة اليوم</label>
+      <textarea id="notes" rows="4" placeholder="ملاحظات…"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS_DATA = "recovery6_data_v1";
+const LS_START= "recovery6_start_v1";
+
+function getStartDate(){
+  let s = localStorage.getItem(LS_START);
+  if(!s){ const d=new Date(); d.setHours(0,0,0,0); localStorage.setItem(LS_START,d.toISOString()); s=d.toISOString(); }
+  return new Date(s);
+}
+function setStartDate(d){ d.setHours(0,0,0,0); localStorage.setItem(LS_START,d.toISOString()); renderAll(); }
+function getDayIndex(){ const st=getStartDate().getTime(); const now=new Date(); now.setHours(0,0,0,0);
+  return Math.min(42, Math.max(1, Math.floor((now-st)/86400000)+1 )); }
+const weekOf = d => Math.ceil(d/7);
+
+function fillRange(arr,s,e,v){ for(let i=s;i<=e;i++) arr[i]=v; }
+const targets = { Prafamax:new Array(43).fill(0), Armodacure:new Array(43).fill(0), NightCalm:new Array(43).fill(0), Gabapentin:new Array(43).fill(0), Caffeine:new Array(43).fill(0) };
+
+fillRange(targets.Prafamax,1,14,400); fillRange(targets.Prafamax,15,28,200); fillRange(targets.Prafamax,29,42,100);
+fillRange(targets.Armodacure,1,14,300); fillRange(targets.Armodacure,15,28,225); fillRange(targets.Armodacure,29,42,150);
+fillRange(targets.NightCalm,1,14,12); fillRange(targets.NightCalm,15,28,9); fillRange(targets.NightCalm,29,42,6);
+fillRange(targets.Gabapentin,1,14,2400); fillRange(targets.Gabapentin,15,28,1600); fillRange(targets.Gabapentin,29,42,800);
+fillRange(targets.Caffeine,1,14,300); fillRange(targets.Caffeine,15,28,200); fillRange(targets.Caffeine,29,42,150);
+
+function loadAll(){ const raw=localStorage.getItem(LS_DATA); return raw?JSON.parse(raw):{}; }
+function saveAll(o){ localStorage.setItem(LS_DATA, JSON.stringify(o)); }
+function getDayData(i){ const all=loadAll(); return all[i] || {meds:{},notes:""}; }
+function setDayData(i,d){ const all=loadAll(); all[i]=d; saveAll(all); }
+
+const DRUGS = [
+  {key:"Prafamax", label:"Prafamax (Modafinil)"},
+  {key:"Armodacure", label:"Armodacure (Armodafinil)"},
+  {key:"NightCalm", label:"Night Calm (Zopiclone)"},
+  {key:"Gabapentin", label:"Gabapentin"},
+  {key:"Caffeine", label:"Caffeine"}
+];
+
+const startDateLabel=document.getElementById("startDateLabel");
+const dayIdxLabel=document.getElementById("dayIdxLabel");
+const weekLabel=document.getElementById("weekLabel");
+const targetsText=document.getElementById("targetsText");
+const drugTableBody=document.querySelector("#drugTable tbody");
+const progressBar=document.getElementById("progressBar");
+const saveMsg=document.getElementById("saveMsg");
+
+function renderAll(){
+  const start=getStartDate(); startDateLabel.textContent=start.toLocaleDateString();
+  const day=getDayIndex(); dayIdxLabel.textContent=day; weekLabel.textContent=weekOf(day);
+  const t={ P:targets.Prafamax[day], A:targets.Armodacure[day], N:targets.NightCalm[day], G:targets.Gabapentin[day], C:targets.Caffeine[day] };
+  targetsText.innerHTML=`Prafamax: <b>${t.P}</b>mg — Armodacure: <b>${t.A}</b>mg — NightCalm: <b>${t.N}</b>mg — Gabapentin: <b>${t.G}</b>mg — كافيين ≤ <b>${t.C}</b>mg.`;
+  drugTableBody.innerHTML=""; const dd=getDayData(day); let achieved=0;
+  DRUGS.forEach(dr=>{
+    const target=targets[dr.key][day]??0; const val=(dd.meds&&dd.meds[dr.key]!==undefined)?dd.meds[dr.key]:"";
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td style="text-align:right">${dr.label}</td><td>${target}</td>
+      <td><input type="number" min="0" step="1" style="width:110px" value="${val}" data-key="${dr.key}" class="doseInput"></td>
+      <td class="sub" id="warn_${dr.key}"></td>`;
+    drugTableBody.appendChild(tr);
+    if(target===0){ if(val!==""&&Number(val)===0) achieved++; }
+    else{ if(val!==""&&Number(val)<=target+1e-6) achieved++; }
+  });
+  progressBar.style.width=(Math.round((achieved/DRUGS.length)*100))+"%";
+}
+
+document.getElementById("saveDay").addEventListener("click",()=>{
+  const idx=getDayIndex(); const dayData=getDayData(idx); dayData.meds=dayData.meds||{};
+  document.querySelectorAll(".doseInput").forEach(inp=>{
+    const k=inp.dataset.key; const v=(inp.value===""?"":Number(inp.value)); dayData.meds[k]=v;
+    const target=targets[k][idx]??0; const warn=document.getElementById("warn_"+k);
+    if(v!=="" && v>target){ warn.textContent="تجاوزت الهدف!"; warn.className="bad"; }
+    else { warn.textContent=""; warn.className="sub"; }
+  });
+  setDayData(idx,dayData);
+  saveMsg.textContent="تم الحفظ ✅"; setTimeout(()=>saveMsg.textContent="",1500);
+  renderAll();
+});
+
+renderAll();
+</script>
+</body>
+</html>
