@@ -5,121 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>خطة التعافي 6 أسابيع — يومية</title>
 <style>
-  :root { --bg:#0b1220; --card:#10192e; --muted:#99a3b3; --text:#e9eef7; --accent:#4ade80; --accent2:#60a5fa; --warn:#fbbf24; --danger:#fb7185 }
+  :root { --bg:#0b1220; --card:#10192e; --muted:#99a3b3; --text:#e9eef7; --accent:#4ade80; --warn:#fbbf24; --danger:#fb7185 }
   *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;color:var(--text);background:#0b1220}
-  header{padding:16px;border-bottom:1px solid #1f2a44;position:sticky;top:0;background:#0b1220ee;backdrop-filter:blur(8px)}
+  header{padding:16px;border-bottom:1px solid #1f2a44;position:sticky;top:0;background:#0b1220ee}
   h1{margin:0;font-size:18px} .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .card{grid-column:span 12;background:var(--card);border:1px solid #1f2a44;border-radius:14px;padding:14px}
   @media(min-width:900px){ .half{grid-column:span 6} }
-  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #263558;background:#0c1426;color:var(--text)}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .btn{padding:9px 12px;border-radius:10px;border:1px solid #2a3b63;background:#0c1426;color:#e6eefb;cursor:pointer}
   .btn.accent{background:#12311e;border-color:#1f7a3e;color:#d7ffe1} .btn.warn{background:#32240d;border-color:#9a6a10;color:#fff3cd} .btn.danger{background:#3a1521;border-color:#a61b42;color:#ffe4ea}
-  .muted{color:var(--muted)} .sub{font-size:12px;color:#b9c3d7} .ok{color:var(--accent)} .bad{color:var(--danger)}
-  .table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid #223054;padding:8px 6px;text-align:center;font-size:13px}
-  .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:20px;border:1px solid #2a3b63;background:#0c1426;font-size:12px}
+  .table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid #223054;padding:6px;text-align:center;font-size:13px}
   .bar{height:8px;background:#0c1426;border:1px solid #243352;border-radius:999px;overflow:hidden} .bar>span{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#4ade80)}
-  dialog{border:none;border-radius:14px;background:#0f1a2e;color:var(--text);max-width:900px;width:92%} dialog::backdrop{background:#0008}
+  .bad{color:#fb7185;font-weight:bold}
 </style>
 </head>
 <body>
 <header>
-  <div class="row" style="justify-content:space-between">
-    <h1>خطة التعافي 6 أسابيع — إدارة يومية</h1>
-    <div class="row">
-      <button class="btn" id="openInv">إعدادات المخزون</button>
-      <button class="btn" id="openRem">تذكيرات صوتية</button>
-      <button class="btn warn" id="resetStart">تغيير يوم البدء</button>
-      <button class="btn" id="exportCsv">تصدير CSV</button>
-      <button class="btn danger" id="wipe">مسح البيانات</button>
+  <div class="row" style="display:flex;justify-content:space-between;align-items:center">
+    <h1>خطة التعافي 6 أسابيع</h1>
+    <div>
+      <button class="btn" id="openInv">مخزون</button>
+      <button class="btn" id="openRem">تذكيرات</button>
+      <button class="btn warn" id="resetStart">تغيير البداية</button>
+      <button class="btn" id="exportCsv">تصدير</button>
+      <button class="btn danger" id="wipe">مسح</button>
     </div>
   </div>
-  <div class="row" style="margin-top:8px;gap:12px">
-    <span class="pill">يوم البدء: <b id="startDateLabel"></b></span>
-    <span class="pill">اليوم: <b id="dayIdxLabel"></b> / 42</span>
-    <span class="pill">الأسبوع: <b id="weekLabel"></b></span>
-  </div>
+  <p>يوم: <b id="dayIdxLabel"></b>/42 — أسبوع: <b id="weekLabel"></b></p>
 </header>
 
 <div class="wrap">
-  <div class="grid">
-    <div class="card">
-      <h3 style="margin:0 0 6px">الجرعات المستهدفة اليوم</h3>
-      <p class="sub" id="targetsText"></p>
-      <div class="bar"><span id="progressBar" style="width:0%"></span></div>
-      <p class="muted">اليوم يتحدد تلقائيًا من أول مرة فتحت الصفحة (يمكن تغييره).</p>
-    </div>
+  <div class="card">
+    <h3>الجرعات اليوم</h3>
+    <p id="targetsText"></p>
+    <div class="bar"><span id="progressBar" style="width:0%"></span></div>
+  </div>
 
-    <div class="card half">
-      <h3 style="margin:0 0 8px">تسجيل الأدوية (اليوم)</h3>
-      <table class="table" id="drugTable">
-        <thead><tr><th>دواء</th><th>الهدف (mg)</th><th>ما أُخذ (mg)</th><th>تحذير</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="row" style="margin-top:10px">
-        <button class="btn accent" id="saveDay">حفظ اليوم</button>
-        <span id="saveMsg" class="muted"></span>
-      </div>
-    </div>
+  <div class="card">
+    <h3>تسجيل الأدوية</h3>
+    <table class="table" id="drugTable">
+      <thead><tr><th>دواء</th><th>هدف (mg)</th><th>ما أُخذ</th><th>تحذير</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button class="btn accent" id="saveDay">حفظ اليوم</button>
+    <span id="saveMsg"></span>
+  </div>
 
-    <div class="card half">
-      <h3 style="margin:0 0 8px">المكملات والسلوك</h3>
-      <label>مكملات اليوم</label>
-      <div class="row">
-        <label class="pill"><input type="checkbox" id="supAM"> صباحًا</label>
-        <label class="pill"><input type="checkbox" id="supNoon"> ظهرًا</label>
-        <label class="pill"><input type="checkbox" id="supPM"> مساءً</label>
-        <label class="pill"><input type="checkbox" id="supBed"> قبل النوم</label>
-      </div>
-      <label style="margin-top:10px">مذكرة اليوم</label>
-      <textarea id="notes" rows="4" placeholder="ملاحظات…"></textarea>
-    </div>
-
-    <div class="card">
-      <h3 style="margin:0 0 8px">المخزون الحالي</h3>
-      <table class="table" id="invTable">
-        <thead><tr><th>دواء</th><th>mg/قرص</th><th>أقراص/علبة</th><th>علب لديك</th><th>أقراص متبقية</th><th>تنبيه</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <p class="sub">يتم الخصم تلقائيًا بعد “حفظ اليوم”.</p>
-    </div>
+  <div class="card">
+    <h3>المخزون</h3>
+    <table class="table" id="invTable"><tbody></tbody></table>
   </div>
 </div>
 
-<!-- إعدادات المخزون -->
-<dialog id="invDlg">
-  <form method="dialog">
-    <h3>إعدادات المخزون</h3>
-    <div id="invForm"></div>
-    <div class="row" style="margin-top:10px;justify-content:flex-end">
-      <button class="btn" value="cancel">إلغاء</button>
-      <button class="btn accent" id="saveInv" value="ok">حفظ</button>
-    </div>
-  </form>
-</dialog>
+<!-- مخزون -->
+<dialog id="invDlg"><form method="dialog">
+  <h3>إعداد المخزون</h3>
+  <div id="invForm"></div>
+  <button class="btn accent" id="saveInv">حفظ</button>
+</form></dialog>
 
 <!-- تذكيرات -->
-<dialog id="remDlg">
-  <form method="dialog">
-    <h3>تذكيرات صوتية</h3>
-    <p class="sub">صفارة وتنبيه نصي يظهر في الأوقات المحددة (طالما الصفحة مفتوحة).</p>
-    <div><label>صباحًا (HH:MM)</label><input id="remAM" placeholder="08:30"></div>
-    <div><label>ظهرًا</label><input id="remNoon" placeholder="13:30"></div>
-    <div><label>مساءً</label><input id="remPM" placeholder="18:00"></div>
-    <div><label>قبل النوم</label><input id="remBed" placeholder="22:30"></div>
-    <div><label><input type="checkbox" id="remEnable"> تفعيل</label></div>
-    <div class="row" style="margin-top:10px;justify-content:flex-end">
-      <button class="btn" value="cancel">إلغاء</button>
-      <button class="btn accent" id="saveRem" value="ok">حفظ</button>
-    </div>
-  </form>
-</dialog>
+<dialog id="remDlg"><form method="dialog">
+  <h3>تذكيرات صوتية</h3>
+  <input id="remAM" placeholder="08:30"> صباحًا<br>
+  <input id="remPM" placeholder="18:00"> مساءً<br>
+  <label><input type="checkbox" id="remEnable"> تفعيل</label><br>
+  <button class="btn accent" id="saveRem">حفظ</button>
+</form></dialog>
 
 <script>
-// هنا هيكون كود الجافاسكربت بالكامل زي ما اتفقنا (مخزون + تذكيرات + جرعات)
+const LS_DATA="r6_data",LS_START="r6_start",LS_INV="r6_inv",LS_REM="r6_rem";
+function getStart(){let s=localStorage.getItem(LS_START);if(!s){let d=new Date();d.setHours(0,0,0,0);localStorage.setItem(LS_START,d.toISOString());s=d.toISOString()}return new Date(s)}
+function setStart(d){d.setHours(0,0,0,0);localStorage.setItem(LS_START,d.toISOString());render()}
+function dayIdx(){let st=getStart().getTime(),now=new Date();now.setHours(0,0,0,0);return Math.min(42,Math.max(1,Math.floor((now-st)/86400000)+1))}
+const weekOf=d=>Math.ceil(d/7);
+function fill(arr,s,e,v){for(let i=s;i<=e;i++)arr[i]=v}
+const targets={Praf:new Array(43).fill(0),Armo:new Array(43).fill(0),Night:new Array(43).fill(0),Gaba:new Array(43).fill(0),Caf:new Array(43).fill(0)};
+fill(targets.Praf,1,14,400);fill(targets.Praf,15,28,200);fill(targets.Praf,29,42,100);
+fill(targets.Armo,1,14,300);fill(targets.Armo,15,28,150);fill(targets.Armo,29,42,75);
+fill(targets.Night,1,14,12);fill(targets.Night,15,28,9);fill(targets.Night,29,42,6);
+fill(targets.Gaba,1,14,2400);fill(targets.Gaba,15,28,1600);fill(targets.Gaba,29,42,800);
+fill(targets.Caf,1,14,300);fill(targets.Caf,15,28,200);fill(targets.Caf,29,42,150);
+const DRUGS=[{k:"Praf",n:"Prafamax"},{k:"Armo",n:"Armodacure"},{k:"Night",n:"NightCalm"},{k:"Gaba",n:"Gabapentin"},{k:"Caf",n:"Caffeine"}];
+function load(){return JSON.parse(localStorage.getItem(LS_DATA)||"{}")}function save(o){localStorage.setItem(LS_DATA,JSON.stringify(o))}
+function gDay(i){let a=load();return a[i]||{meds:{}}}function sDay(i,d){let a=load();a[i]=d;save(a)}
+function gInv(){return JSON.parse(localStorage.getItem(LS_INV)||"{}")}function sInv(o){localStorage.setItem(LS_INV,JSON.stringify(o))}
+function render(){let d=dayIdx();document.getElementById("dayIdxLabel").textContent=d;document.getElementById("weekLabel").textContent=weekOf(d);
+let t={P:targets.Praf[d],A:targets.Armo[d],N:targets.Night[d],G:targets.Gaba[d],C:targets.Caf[d]};
+document.getElementById("targetsText").innerHTML=`Prafamax:${t.P} Armoda:${t.A} Night:${t.N} Gaba:${t.G} Caffeine≤${t.C}`;
+let tb=document.querySelector("#drugTable tbody");tb.innerHTML="";let dd=gDay(d),ach=0;
+DRUGS.forEach(dr=>{let target=targets[dr.k][d],val=(dd.meds&&dd.meds[dr.k]!==undefined)?dd.meds[dr.k]:"";
+let tr=document.createElement("tr");tr.innerHTML=`<td>${dr.n}</td><td>${target}</td>
+<td><input type="number" value="${val}" data-k="${dr.k}"></td><td id="w_${dr.k}"></td>`;tb.appendChild(tr)});
+}
+document.getElementById("saveDay").onclick=()=>{let d=dayIdx(),dd=gDay(d);dd.meds=dd.meds||{};
+document.querySelectorAll("#drugTable input").forEach(inp=>{let k=inp.dataset.k,v=inp.value?Number(inp.value):"";dd.meds[k]=v;let target=targets[k][d];let w=document.getElementById("w_"+k);if(v!=""&&v>target){w.textContent="تجاوز";w.className="bad"}else{w.textContent=""}});
+sDay(d,dd);document.getElementById("saveMsg").textContent="تم ✅";setTimeout(()=>document.getElementById("saveMsg").textContent="",1500);render()};
+document.getElementById("resetStart").onclick=()=>{let s=prompt("YYYY-MM-DD");if(!s)return;let d=new Date(s);if(!isNaN(d))setStart(d)};
+document.getElementById("wipe").onclick=()=>{if(confirm("مسح؟")){localStorage.removeItem(LS_DATA);render()}};
+document.getElementById("exportCsv").onclick=()=>{let all=load();let csv="Day,Praf,Armo,Night,Gaba,Caf\\n";for(let d=1;d<=42;d++){let m=all[d]?.meds||{};csv+=`${d},${m.Praf||""},${m.Armo||""},${m.Night||""},${m.Gaba||""},${m.Caf||""}\\n`}let blob=new Blob([csv],{type:"text/csv"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="r6.csv";a.click()};
+render();
 </script>
-
 </body>
 </html>
